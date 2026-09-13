@@ -660,10 +660,16 @@
                 positionTag = "mid";
               }
 
+              // 4弦(G)の開放は定番フォームでもごく普通なのでペナルティ対象から除く。
+              // 3・2・1弦を開放にする代わりの押弦がある場合、そちらを定番フォームとして優先する
+              const openCount = frets.slice(1).filter(f => f === 0).length;
+
               results.push({
                 frets: frets,
                 baseFret: baseFret,
                 maxFret: maxFret,
+                openCount: openCount,
+                distinctIntervalCount: intervalsPresent.size,
                 positionTag: positionTag,
                 intervals: [f4.interval, f3.interval, f2.interval, f1.interval]
               });
@@ -674,7 +680,11 @@
 
       results.sort((a, b) => {
         if (a.baseFret !== b.baseFret) return a.baseFret - b.baseFret;
-        return a.maxFret - b.maxFret;
+        if (a.maxFret !== b.maxFret) return a.maxFret - b.maxFret;
+        // 同点の場合、まず構成音の種類が多い(=省略のない)方を優先し、
+        // それも同点なら3・2・1弦の開放が少ない方を教則本の定番フォームに近いものとして優先する
+        if (a.distinctIntervalCount !== b.distinctIntervalCount) return b.distinctIntervalCount - a.distinctIntervalCount;
+        return a.openCount - b.openCount;
       });
 
       return results;
