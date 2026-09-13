@@ -547,6 +547,7 @@
     // Web Audio API
     let audioCtx = null;
     async function getAudioContext() {
+      const wasSuspended = !audioCtx || audioCtx.state === 'suspended';
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
@@ -554,6 +555,17 @@
         // iOS Safariはresume()の完了を待たずにcurrentTimeを読むと0近辺のまま止まり、
         // その後のスケジュールが過去時刻になって無音になることがあるため必ずawaitする
         await audioCtx.resume();
+      }
+      if (wasSuspended) {
+        // iOS Safari向けの追加対策: resume()だけではオーディオ経路が実際には開かないことがあるため、
+        // 1サンプルの無音バッファをこのユーザー操作の中で即座に再生してハードウェアを確実に起動する
+        try {
+          const buffer = audioCtx.createBuffer(1, 1, 22050);
+          const unlockSource = audioCtx.createBufferSource();
+          unlockSource.buffer = buffer;
+          unlockSource.connect(audioCtx.destination);
+          unlockSource.start(0);
+        } catch (e) { /* 無視して通常再生を試みる */ }
       }
       return audioCtx;
     }
