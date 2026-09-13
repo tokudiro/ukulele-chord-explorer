@@ -193,6 +193,9 @@
           <div class="grid grid-cols-6 sm:grid-cols-12 gap-1" id="key-selector-container">
             <!-- Key buttons via JS -->
           </div>
+          <div class="flex flex-wrap gap-1.5" id="diatonic-chip-container">
+            <!-- Diatonic chord chips via JS (shown once a key is picked) -->
+          </div>
         </div>
       </div>
 
@@ -431,6 +434,11 @@
         map[noteName] = { typeId: types[i], roman: romans[i] };
       });
       return map;
+    }
+
+    function getChordFullName(rootName, typeId) {
+      const typeObj = CHORD_FORMULAS.find(c => c.id === typeId) || CHORD_FORMULAS[0];
+      return `${rootName}${typeObj.name === "Maj" ? "" : typeObj.name}`;
     }
 
     function safeGetItem(key) {
@@ -869,8 +877,7 @@
 
     function renderFocusView() {
       const voicing = currentFilteredVoicings[selectedVoicingIndex];
-      const typeObj = CHORD_FORMULAS.find(c => c.id === currentTypeId) || CHORD_FORMULAS[0];
-      const fullName = `${currentRoot}${typeObj.name === "Maj" ? "" : typeObj.name}`;
+      const fullName = getChordFullName(currentRoot, currentTypeId);
 
       document.getElementById("focus-chord-title").textContent = fullName;
       if (!voicing) {
@@ -987,6 +994,8 @@
           + (isDiatonic ? " ring-1 ring-inset [--tw-ring-color:rgb(var(--accent-400))]" : "");
       });
 
+      renderDiatonicChips();
+
       // ボイシング生成 & フィルター
       generatedVoicings = generateVoicings(currentRoot, currentTypeId);
       currentFilteredVoicings = generatedVoicings.filter(v => {
@@ -1015,6 +1024,29 @@
     function setKeyRoot(name) {
       selectedKeyRoot = selectedKeyRoot === name ? null : name;
       renderKeySelector();
+      updateAll();
+    }
+
+    // キーで選んだダイアトニックコードをワンタップで選択できるチップ列
+    function renderDiatonicChips() {
+      const container = document.getElementById("diatonic-chip-container");
+      const diatonicMap = getDiatonicMap();
+      if (!diatonicMap) {
+        container.innerHTML = "";
+        return;
+      }
+      container.innerHTML = Object.entries(diatonicMap).map(([rootName, info]) => {
+        const isAct = rootName === currentRoot && info.typeId === currentTypeId;
+        const cls = isAct
+          ? "px-2.5 py-1.5 rounded-lg font-bold text-xs bg-[rgb(var(--accent-500))] text-white shadow-md"
+          : "px-2.5 py-1.5 rounded-lg font-medium text-xs bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800";
+        return `<button onclick="selectDiatonicChord('${rootName}', '${info.typeId}')" title="${info.roman}" class="${cls}">${getChordFullName(rootName, info.typeId)}</button>`;
+      }).join("");
+    }
+
+    function selectDiatonicChord(rootName, typeId) {
+      currentRoot = rootName;
+      currentTypeId = typeId;
       updateAll();
     }
 
