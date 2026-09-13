@@ -68,7 +68,7 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen pb-24 md:pb-16 selection:bg-[rgba(var(--accent-500),0.3)] selection:text-[rgb(var(--accent-300))]">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen pb-6 selection:bg-[rgba(var(--accent-500),0.3)] selection:text-[rgb(var(--accent-300))]">
 
   <!-- Header -->
   <header class="border-b border-slate-200 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90 backdrop-blur sticky top-0 z-50">
@@ -307,26 +307,6 @@
       </div>
     </section>
   </main>
-
-  <!-- Bottom Mobile Action Bar -->
-  <div class="fixed bottom-0 inset-x-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-t border-slate-200 dark:border-slate-800 p-2.5 sm:hidden z-40 flex items-center justify-between gap-2">
-    <div class="flex items-center gap-2 pl-1">
-      <span class="text-xs font-bold text-[rgb(var(--accent-400))]" id="bottom-bar-chord">C</span>
-      <span class="text-[10px] font-mono text-slate-500 dark:text-slate-400" id="bottom-bar-frets">0-0-0-3</span>
-    </div>
-    <div class="flex items-center gap-1.5">
-      <button onclick="navigateVoicing(-1)" class="p-2 rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 tap-scale">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-      </button>
-      <button onclick="playActiveVoicing()" class="px-4 py-2 rounded-lg bg-[rgb(var(--accent-500))] text-white font-bold text-xs flex items-center gap-1.5 shadow-md [--tw-shadow-color:rgba(var(--accent-500),0.2)] tap-scale">
-        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        <span>Play</span>
-      </button>
-      <button onclick="navigateVoicing(1)" class="p-2 rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 tap-scale">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-      </button>
-    </div>
-  </div>
 
   <script>
     // 12音クロマチックスケール (ウクレレ実音用)
@@ -832,8 +812,6 @@
       const fullName = `${currentRoot}${typeObj.name === "Maj" ? "" : typeObj.name}`;
 
       document.getElementById("focus-chord-title").textContent = fullName;
-      document.getElementById("bottom-bar-chord").textContent = fullName;
-
       if (!voicing) {
         document.getElementById("focus-fret-code").textContent = "---";
         document.getElementById("focus-tag-badge").textContent = "None";
@@ -847,7 +825,6 @@
       }
 
       document.getElementById("focus-fret-code").textContent = voicing.frets.join("-");
-      document.getElementById("bottom-bar-frets").textContent = voicing.frets.join("-");
 
       const total = currentFilteredVoicings.length;
       document.getElementById("focus-tag-badge").textContent = `Voicing ${selectedVoicingIndex + 1} / ${total} (${getPosName(voicing.positionTag)})`;
