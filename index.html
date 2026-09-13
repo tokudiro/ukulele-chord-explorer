@@ -173,6 +173,29 @@
 
     <!-- 1. Chord Selector Section -->
     <section class="bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-3 sm:p-4 shadow-lg space-y-3">
+      <!-- Key Helper (optional, collapsed by default) -->
+      <div>
+        <button type="button" id="btn-toggle-key-panel" class="w-full flex items-center gap-1 mb-1.5 text-left">
+          <svg id="key-panel-chevron" class="w-3 h-3 text-slate-400 dark:text-slate-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <span class="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">Key <span class="normal-case font-medium text-slate-400 dark:text-slate-500">(optional)</span></span>
+        </button>
+        <div id="key-panel-body" class="hidden space-y-1.5 mb-1.5">
+          <div class="flex items-center justify-end gap-1.5">
+            <div class="bg-slate-100 dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center text-[10px]" id="key-mode-toggle">
+              <button data-mode="major" class="px-2 py-0.5 rounded font-semibold">Major</button>
+              <button data-mode="minor" class="px-2 py-0.5 rounded font-medium">minor</button>
+            </div>
+            <div class="bg-slate-100 dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center text-[10px]" id="key-quality-toggle">
+              <button data-quality="triad" class="px-2 py-0.5 rounded font-semibold">Triad</button>
+              <button data-quality="seventh" class="px-2 py-0.5 rounded font-medium">7th</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-6 sm:grid-cols-12 gap-1" id="key-selector-container">
+            <!-- Key buttons via JS -->
+          </div>
+        </div>
+      </div>
+
       <!-- Root Selection -->
       <div>
         <div class="flex items-center justify-between mb-1.5">
@@ -333,6 +356,7 @@
       { id: "maj7", name: "M7", formula: [0, 4, 7, 11], labels: ["1", "3", "5", "7"] },
       { id: "m7", name: "m7", formula: [0, 3, 7, 10], labels: ["1", "b3", "5", "b7"] },
       { id: "m7b5", name: "m7b5", formula: [0, 3, 6, 10], labels: ["1", "b3", "b5", "b7"] },
+      { id: "dim", name: "dim", formula: [0, 3, 6], labels: ["1", "b3", "b5"] },
       { id: "dim7", name: "dim7", formula: [0, 3, 6, 9], labels: ["1", "b3", "b5", "6"] },
       { id: "6", name: "6", formula: [0, 4, 7, 9], labels: ["1", "3", "5", "6"] },
       { id: "m6", name: "m6", formula: [0, 3, 7, 9], labels: ["1", "b3", "5", "6"] },
@@ -342,6 +366,24 @@
       { id: "9", name: "9", formula: [0, 4, 7, 10, 14], labels: ["1", "3", "5", "b7", "9"] },
       { id: "aug", name: "aug", formula: [0, 4, 8], labels: ["1", "3", "#5"] }
     ];
+
+    // キーのダイアトニックコード定義 (度数=トニックからの半音数)
+    const DIATONIC_DEGREES = {
+      major: {
+        degrees: [0, 2, 4, 5, 7, 9, 11],
+        triadTypes: ["", "m", "m", "", "", "m", "dim"],
+        seventhTypes: ["maj7", "m7", "m7", "maj7", "7", "m7", "m7b5"],
+        romanTriad: ["I", "ii", "iii", "IV", "V", "vi", "vii°"],
+        romanSeventh: ["Imaj7", "ii7", "iii7", "IVmaj7", "V7", "vi7", "viiø7"]
+      },
+      minor: {
+        degrees: [0, 2, 3, 5, 7, 8, 10],
+        triadTypes: ["m", "dim", "", "m", "m", "", ""],
+        seventhTypes: ["m7", "m7b5", "maj7", "m7", "m7", "maj7", "7"],
+        romanTriad: ["i", "ii°", "III", "iv", "v", "VI", "VII"],
+        romanSeventh: ["i7", "iiø7", "IIImaj7", "iv7", "v7", "VImaj7", "VII7"]
+      }
+    };
 
     // テーマカラー (アクセントカラー変更用プリセット)
     const THEME_PRESETS = [
@@ -372,6 +414,25 @@
     let generatedVoicings = [];
     let currentFilteredVoicings = [];
     let isFocusOnlyMode = false; // スマホでのフォーカスビュー優先
+    let selectedKeyRoot = null; // 選択中のキーのルート音名 (未選択はnull)
+    let keyMode = "major"; // "major" | "minor"
+    let chordQualityMode = "triad"; // "triad" | "seventh"
+
+    // 選択中のキーにおけるダイアトニックコードを { ルート音名: {typeId, roman} } の形で返す
+    function getDiatonicMap() {
+      if (!selectedKeyRoot) return null;
+      const table = DIATONIC_DEGREES[keyMode];
+      const types = chordQualityMode === "seventh" ? table.seventhTypes : table.triadTypes;
+      const romans = chordQualityMode === "seventh" ? table.romanSeventh : table.romanTriad;
+      const rootIndex = getNoteIndex(selectedKeyRoot);
+      const map = {};
+      table.degrees.forEach((deg, i) => {
+        const noteName = CHROMATIC_SCALE[(rootIndex + deg) % 12].name;
+        map[noteName] = { typeId: types[i], roman: romans[i] };
+      });
+      return map;
+    }
+
     function safeGetItem(key) {
       try { return localStorage.getItem(key); } catch (e) { return null; }
     }
@@ -895,21 +956,35 @@
 
     function updateAll() {
       const typeObj = CHORD_FORMULAS.find(c => c.id === currentTypeId) || CHORD_FORMULAS[0];
-      document.getElementById("chord-formula-text").textContent = `Formula: ${typeObj.labels.join(" - ")}`;
+      const diatonicMap = getDiatonicMap();
+      const currentDiatonic = diatonicMap && diatonicMap[currentRoot] && diatonicMap[currentRoot].typeId === currentTypeId
+        ? diatonicMap[currentRoot]
+        : null;
+      document.getElementById("chord-formula-text").textContent = currentDiatonic
+        ? `Formula: ${typeObj.labels.join(" - ")} (${currentDiatonic.roman} in ${selectedKeyRoot} ${keyMode})`
+        : `Formula: ${typeObj.labels.join(" - ")}`;
 
-      // Update button active state
+      // Update button active state (キーが選択されていれば、ダイアトニックなコードにリングを表示)
       document.querySelectorAll("#root-selector-container button").forEach(btn => {
-        const isAct = btn.getAttribute("data-root") === currentRoot;
-        btn.className = isAct
+        const rootName = btn.getAttribute("data-root");
+        const isAct = rootName === currentRoot;
+        const isDiatonic = !!(diatonicMap && diatonicMap[rootName]);
+        btn.className = (isAct
           ? "px-2.5 py-1.5 rounded-lg font-bold text-xs bg-[rgb(var(--accent-500))] text-white shadow-md flex-shrink-0"
-          : "px-2.5 py-1.5 rounded-lg font-medium text-xs bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 flex-shrink-0";
+          : "px-2.5 py-1.5 rounded-lg font-medium text-xs bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 flex-shrink-0")
+          + (isDiatonic ? " ring-1 ring-inset [--tw-ring-color:rgb(var(--accent-400))]" : "");
+        btn.title = isDiatonic ? `${diatonicMap[rootName].roman} in ${selectedKeyRoot} ${keyMode}` : "";
       });
 
+      const diatonicTypeId = diatonicMap && diatonicMap[currentRoot] ? diatonicMap[currentRoot].typeId : null;
       document.querySelectorAll("#type-selector-container button").forEach(btn => {
-        const isAct = btn.getAttribute("data-type") === currentTypeId;
-        btn.className = isAct
+        const typeId = btn.getAttribute("data-type");
+        const isAct = typeId === currentTypeId;
+        const isDiatonic = diatonicTypeId !== null && typeId === diatonicTypeId;
+        btn.className = (isAct
           ? "px-2.5 py-1.5 rounded-lg font-bold text-xs bg-[rgb(var(--accent-500))] text-white shadow-md flex-shrink-0"
-          : "px-2.5 py-1.5 rounded-lg font-medium text-xs bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 flex-shrink-0";
+          : "px-2.5 py-1.5 rounded-lg font-medium text-xs bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 flex-shrink-0")
+          + (isDiatonic ? " ring-1 ring-inset [--tw-ring-color:rgb(var(--accent-400))]" : "");
       });
 
       // ボイシング生成 & フィルター
@@ -924,6 +999,53 @@
       renderFocusView();
       renderFullFretboard();
       renderVoicingCards();
+    }
+
+    function renderKeySelector() {
+      const container = document.getElementById("key-selector-container");
+      container.innerHTML = CHROMATIC_SCALE.map(n => {
+        const isAct = n.name === selectedKeyRoot;
+        const cls = isAct
+          ? "px-2.5 py-1.5 rounded-lg font-bold text-xs bg-[rgb(var(--accent-500))] text-white shadow-md flex-shrink-0"
+          : "px-2.5 py-1.5 rounded-lg font-medium text-xs bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 flex-shrink-0";
+        return `<button onclick="setKeyRoot('${n.name}')" class="${cls}">${n.name}</button>`;
+      }).join("");
+    }
+
+    function setKeyRoot(name) {
+      selectedKeyRoot = selectedKeyRoot === name ? null : name;
+      renderKeySelector();
+      updateAll();
+    }
+
+    function setKeyMode(mode) {
+      keyMode = mode;
+      syncKeyModeToggleUI();
+      updateAll();
+    }
+
+    function setChordQualityMode(mode) {
+      chordQualityMode = mode;
+      syncKeyQualityToggleUI();
+      updateAll();
+    }
+
+    function syncKeyModeToggleUI() {
+      document.querySelectorAll("#key-mode-toggle button").forEach(btn => {
+        const isAct = btn.getAttribute("data-mode") === keyMode;
+        btn.className = isAct
+          ? "px-2 py-0.5 rounded font-semibold bg-[rgb(var(--accent-500))] text-white transition"
+          : "px-2 py-0.5 rounded font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition";
+      });
+    }
+
+    function syncKeyQualityToggleUI() {
+      document.querySelectorAll("#key-quality-toggle button").forEach(btn => {
+        const isAct = btn.getAttribute("data-quality") === chordQualityMode;
+        btn.className = isAct
+          ? "px-2 py-0.5 rounded font-semibold bg-[rgb(var(--accent-500))] text-white transition"
+          : "px-2 py-0.5 rounded font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition";
+      });
     }
 
     function selectVoicing(index) {
@@ -1012,6 +1134,23 @@
       document.querySelectorAll(".pos-btn").forEach(btn => {
         btn.onclick = () => setFilter(btn.getAttribute("data-filter"));
       });
+
+      // 3.5 キー(調)ヘルパー (初期状態は折りたたみ)
+      renderKeySelector();
+      syncKeyModeToggleUI();
+      syncKeyQualityToggleUI();
+      document.querySelectorAll("#key-mode-toggle button").forEach(btn => {
+        btn.onclick = () => setKeyMode(btn.getAttribute("data-mode"));
+      });
+      document.querySelectorAll("#key-quality-toggle button").forEach(btn => {
+        btn.onclick = () => setChordQualityMode(btn.getAttribute("data-quality"));
+      });
+      const keyPanelBody = document.getElementById("key-panel-body");
+      const keyPanelChevron = document.getElementById("key-panel-chevron");
+      document.getElementById("btn-toggle-key-panel").onclick = () => {
+        const isHidden = keyPanelBody.classList.toggle("hidden");
+        keyPanelChevron.classList.toggle("rotate-90", !isHidden);
+      };
 
       // 4. フォーカスビュー内ボタン
       document.getElementById("btn-focus-prev").onclick = () => navigateVoicing(-1);
