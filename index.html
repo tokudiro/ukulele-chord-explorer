@@ -1318,7 +1318,10 @@
         const matchedRoot = CHROMATIC_SCALE.find(c => c.name.toUpperCase() === root.toUpperCase() || c.alt.toUpperCase() === root.toUpperCase());
         if (matchedRoot) currentRoot = matchedRoot.name;
 
-        const matchedType = CHORD_FORMULAS.find(f => f.name.toLowerCase() === type.toLowerCase() || f.id.toLowerCase() === type.toLowerCase());
+        // "m7"(minor7)と"M7"(maj7の表示名)のように大文字小文字だけで意味が変わる表記があるため、
+        // 大文字小文字を区別した完全一致を優先し、見つからない場合のみ大文字小文字を無視して照合する
+        const matchedType = CHORD_FORMULAS.find(f => f.id === type || f.name === type)
+          || CHORD_FORMULAS.find(f => f.id.toLowerCase() === type.toLowerCase() || f.name.toLowerCase() === type.toLowerCase());
         if (matchedType) currentTypeId = matchedType.id;
 
         updateAll();
