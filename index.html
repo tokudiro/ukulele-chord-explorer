@@ -182,7 +182,7 @@
             <input type="text" id="quick-search-input" placeholder="Am7, C#m..." class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-md px-2 py-1 text-base sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-[rgb(var(--accent-500))]" />
           </div>
         </div>
-        <div class="flex sm:grid sm:grid-cols-12 gap-1 overflow-x-auto no-scrollbar pb-1" id="root-selector-container">
+        <div class="grid grid-cols-6 sm:grid-cols-12 gap-1" id="root-selector-container">
           <!-- Root buttons via JS -->
         </div>
       </div>
@@ -193,7 +193,7 @@
           <span class="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">2. Chord Type</span>
           <span class="text-[10px] text-slate-400 dark:text-slate-500 font-mono" id="chord-formula-text">1 - 3 - 5</span>
         </div>
-        <div class="flex gap-1 overflow-x-auto no-scrollbar pb-1 sm:flex-wrap" id="type-selector-container">
+        <div class="flex flex-wrap gap-1" id="type-selector-container">
           <!-- Type buttons via JS -->
         </div>
       </div>
@@ -486,19 +486,21 @@
 
     // Web Audio API
     let audioCtx = null;
-    function getAudioContext() {
+    async function getAudioContext() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
       if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        // iOS Safariはresume()の完了を待たずにcurrentTimeを読むと0近辺のまま止まり、
+        // その後のスケジュールが過去時刻になって無音になることがあるため必ずawaitする
+        await audioCtx.resume();
       }
       return audioCtx;
     }
 
-    function playUkuleleChord(frets) {
+    async function playUkuleleChord(frets) {
       if (!frets) return;
-      const ctx = getAudioContext();
+      const ctx = await getAudioContext();
       const baseMidi = isLowG ? [55, 60, 64, 69] : [67, 60, 64, 69];
       const now = ctx.currentTime;
 
