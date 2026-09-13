@@ -173,6 +173,14 @@
 
     <!-- 1. Chord Selector Section -->
     <section class="bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-3 sm:p-4 shadow-lg space-y-3">
+      <!-- Quick Search (always available) -->
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">Quick Search</span>
+        <div class="relative w-32 sm:w-40">
+          <input type="text" id="quick-search-input" placeholder="Am7, C#m..." class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-md px-2 py-1 text-base sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-[rgb(var(--accent-500))]" />
+        </div>
+      </div>
+
       <!-- Key Helper (optional, collapsed by default) -->
       <div>
         <button type="button" id="btn-toggle-key-panel" class="w-full flex items-center gap-1 mb-1.5 text-left">
@@ -193,20 +201,23 @@
           <div class="grid grid-cols-6 sm:grid-cols-12 gap-1" id="key-selector-container">
             <!-- Key buttons via JS -->
           </div>
-          <div class="flex flex-wrap gap-1.5" id="diatonic-chip-container">
-            <!-- Diatonic chord chips via JS (shown once a key is picked) -->
-          </div>
+        </div>
+      </div>
+
+      <!-- Diatonic Chords (shown instead of Root Note / Chord Type once a key is picked) -->
+      <div id="diatonic-big-section" class="hidden">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400" id="diatonic-big-label">Chords in Key</span>
+        </div>
+        <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5" id="diatonic-big-container">
+          <!-- Big diatonic chord buttons via JS -->
         </div>
       </div>
 
       <!-- Root Selection -->
-      <div>
+      <div id="root-note-section">
         <div class="flex items-center justify-between mb-1.5">
           <span class="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">1. Root Note</span>
-          <!-- Quick Search Input -->
-          <div class="relative w-32 sm:w-40">
-            <input type="text" id="quick-search-input" placeholder="Am7, C#m..." class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-md px-2 py-1 text-base sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-[rgb(var(--accent-500))]" />
-          </div>
         </div>
         <div class="grid grid-cols-6 sm:grid-cols-12 gap-1" id="root-selector-container">
           <!-- Root buttons via JS -->
@@ -214,7 +225,7 @@
       </div>
 
       <!-- Chord Quality -->
-      <div>
+      <div id="chord-type-section">
         <div class="flex items-center justify-between mb-1.5">
           <span class="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">2. Chord Type</span>
           <span class="text-[10px] text-slate-400 dark:text-slate-500 font-mono" id="chord-formula-text">1 - 3 - 5</span>
@@ -1029,18 +1040,36 @@
 
     // キーで選んだダイアトニックコードをワンタップで選択できるチップ列
     function renderDiatonicChips() {
-      const container = document.getElementById("diatonic-chip-container");
       const diatonicMap = getDiatonicMap();
+      const bigSection = document.getElementById("diatonic-big-section");
+      const rootSection = document.getElementById("root-note-section");
+      const typeSection = document.getElementById("chord-type-section");
+      const container = document.getElementById("diatonic-big-container");
+
       if (!diatonicMap) {
-        container.innerHTML = "";
+        bigSection.classList.add("hidden");
+        rootSection.classList.remove("hidden");
+        typeSection.classList.remove("hidden");
         return;
       }
+
+      bigSection.classList.remove("hidden");
+      rootSection.classList.add("hidden");
+      typeSection.classList.add("hidden");
+
+      document.getElementById("diatonic-big-label").textContent = `Chords in ${selectedKeyRoot} ${keyMode}`;
+
       container.innerHTML = Object.entries(diatonicMap).map(([rootName, info]) => {
         const isAct = rootName === currentRoot && info.typeId === currentTypeId;
         const cls = isAct
-          ? "px-2.5 py-1.5 rounded-lg font-bold text-xs bg-[rgb(var(--accent-500))] text-white shadow-md"
-          : "px-2.5 py-1.5 rounded-lg font-medium text-xs bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800";
-        return `<button onclick="selectDiatonicChord('${rootName}', '${info.typeId}')" title="${info.roman}" class="${cls}">${getChordFullName(rootName, info.typeId)}</button>`;
+          ? "flex flex-col items-center py-2.5 sm:py-3 rounded-xl font-black text-base sm:text-lg bg-[rgb(var(--accent-500))] text-white shadow-md"
+          : "flex flex-col items-center py-2.5 sm:py-3 rounded-xl font-bold text-base sm:text-lg bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800";
+        return `
+          <button onclick="selectDiatonicChord('${rootName}', '${info.typeId}')" class="${cls}">
+            <span>${getChordFullName(rootName, info.typeId)}</span>
+            <span class="text-[9px] font-medium opacity-70 mt-0.5">${info.roman}</span>
+          </button>
+        `;
       }).join("");
     }
 
