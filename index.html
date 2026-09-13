@@ -664,11 +664,25 @@
               // 3・2・1弦を開放にする代わりの押弦がある場合、そちらを定番フォームとして優先する
               const openCount = frets.slice(1).filter(f => f === 0).length;
 
+              // 押さえる弦の間に開放弦が挟まると指を離して配置する必要があり運指しにくいため、
+              // 押弦の範囲内に挟まる開放弦の数を数え、少ない(=指が連続して並ぶ)方を自然な形として優先する
+              const frettedIndices = [];
+              frets.forEach((f, i) => { if (f > 0) frettedIndices.push(i); });
+              let gapCount = 0;
+              if (frettedIndices.length >= 2) {
+                const first = frettedIndices[0];
+                const last = frettedIndices[frettedIndices.length - 1];
+                for (let i = first; i <= last; i++) {
+                  if (frets[i] === 0) gapCount++;
+                }
+              }
+
               results.push({
                 frets: frets,
                 baseFret: baseFret,
                 maxFret: maxFret,
                 openCount: openCount,
+                gapCount: gapCount,
                 distinctIntervalCount: intervalsPresent.size,
                 positionTag: positionTag,
                 intervals: [f4.interval, f3.interval, f2.interval, f1.interval]
@@ -682,8 +696,10 @@
         if (a.baseFret !== b.baseFret) return a.baseFret - b.baseFret;
         if (a.maxFret !== b.maxFret) return a.maxFret - b.maxFret;
         // 同点の場合、まず構成音の種類が多い(=省略のない)方を優先し、
+        // 次に押弦の間に開放弦を挟まない(=指が自然に並ぶ)方を優先し、
         // それも同点なら3・2・1弦の開放が少ない方を教則本の定番フォームに近いものとして優先する
         if (a.distinctIntervalCount !== b.distinctIntervalCount) return b.distinctIntervalCount - a.distinctIntervalCount;
+        if (a.gapCount !== b.gapCount) return a.gapCount - b.gapCount;
         return a.openCount - b.openCount;
       });
 
