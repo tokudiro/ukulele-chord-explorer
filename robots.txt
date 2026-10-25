@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tokudiro.github.io/ukulele-chord-explorer/sitemap.xml
